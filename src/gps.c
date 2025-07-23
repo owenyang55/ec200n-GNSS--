@@ -4,6 +4,11 @@
 #include "uart.h"
 
 
+int GNSS_Init(int fd);
+void GNSS_data(int fd);
+int convert_time(const char* cclk_response, char* buffer, size_t size);
+
+
 //初始化GNSS配置
 int GNSS_Init(int fd){
     printf("----Init GNSS----\n");
@@ -32,18 +37,12 @@ int GNSS_Init(int fd){
 
 //使用GPS功能
 void GNSS_data(int fd){
-    //初始化配置
-
-    //配置为GPS+BEIDOU
-    
-
-    // const char* buf = set_recv_data(fd,"AT+QLBSCFG? ");
     
     //获取时间信息
     char buf[128] = {0};
-    const char* time = set_recv_data(fd,"AT+CCLK?");
-    int ret = convert_time(time,buf,sizeof(buf));
-    // printf("RECV time:%s\n",time);
+    const char* origin_time = set_recv_data(fd,"AT+CCLK?");
+    int ret = convert_time(origin_time,buf,sizeof(buf));
+    printf("RECV time:%s\n",buf);
     
     //获取位置信息
     //set_recv_data(fd,"AT+QLBSCFG?");
@@ -51,6 +50,8 @@ void GNSS_data(int fd){
     // const char* locate = set_recv_data(fd,"AT+QLBS");
     // printf("RECV location:%s\n",locate);
 }
+
+
 
 
 /**
