@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
     int flag = ec200_init(fd);
     if(flag == -1){
         close(fd);
-        printf("error\n");
+        printf("error in ec200_init\n");
         exit(-1);
     }
 
@@ -48,7 +48,7 @@ int main(int argc, char *argv[]) {
     flag = sim_init(fd);
     if(flag == -1){
         close(fd);
-        printf("error\n");
+        printf("error in sim_init\n");
         exit(-1);
     }
 
@@ -56,9 +56,21 @@ int main(int argc, char *argv[]) {
     flag = GNSS_Init(fd);
     if(flag == -1){
         close(fd);
-        printf("error\n");
+        printf("error in gps_init\n");
         exit(-1);
     }
+
+    //间隔30s循环打印时间及位置信息
+    while(1){
+        flag = GNSS_data(fd);
+        if(flag == -1){
+            close(fd);
+            printf("error in gps_data\n");
+            exit(-1);
+        }
+        sleep(30);
+    }
+
 
     
     close(fd);

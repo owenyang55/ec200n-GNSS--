@@ -9,7 +9,13 @@
 
 
 
-//功能：串口收发，返回接收的信息
+
+/**
+ * @brief 串口收发，将信息发回
+ * @param fd 文件描述符
+ * @param data 串口输入的命令
+ * @return 返回转换后的浮点数
+ */
 const char * set_recv_data(int fd,const char *data){
     char write_data[128];
     snprintf(write_data, sizeof(write_data), "%s\r", data); //加入\r符合AT指令要求
@@ -23,11 +29,11 @@ const char * set_recv_data(int fd,const char *data){
     //等待响应结束
     tcdrain(fd);
 
-    static char* buff[128];
+    static char buff[128];
     ret = read(fd,buff,sizeof(buff) - 1);
     if (ret > 0) {
         buff[ret] = '\0';
-        printf("\n收到响应 (%d 字节):\n---\n%s\n---\n", ret, buff);
+        printf("\n收到响应 (%d 字节):\n---%s\n---\n", ret, buff);
     } 
     else if (ret == 0) {
         printf("\n在超时时间内没有收到数据。\n");}
