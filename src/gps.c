@@ -5,12 +5,9 @@
 #include <stdlib.h>
 #include <math.h>
 #include "uart.h"
+#include "gps.h"
 
 
-int GNSS_Init(int fd);
-int GNSS_data(int fd);
-int convert_time(const char* cclk_response, char* buffer, size_t size);
-double convert_long_and_lati(const char* nmea_str);
 //void QuecLocator(int fd);
 
 //初始化GNSS配置
@@ -38,10 +35,14 @@ int GNSS_Init(int fd){
 }
 
 
-//使用GPS功能
-//@return 0 表示成功, -1 表示失败。
+/**
+ * @brief 获取经纬度
+ * @param fd 文件描述符
+ * @param data 传出参数，负责接收经纬度
+ * @return 成功0,失败-1
+ */
 
-int GNSS_data(int fd){
+int GNSS_data(int fd,struct send_data* data){
     
     //获取时间信息
     char buf[128] = {0};
@@ -53,11 +54,7 @@ int GNSS_data(int fd){
     }
     printf("RECV time:%s\n",buf);
     
-    //获取位置信息(需付费)
-    //set_recv_data(fd,"AT+QLBSCFG?");
-    // set_recv_data(fd,"AT+QLBS=2,\"94:B6:09:29:72:4B\",-30,\"1c:8b:ef:4c:5e:87\",-39");
-    // const char* locate = set_recv_data(fd,"AT+QLBS");
-    // printf("RECV location:%s\n",locate);
+
         
     const char* response;
     while(1){
@@ -76,7 +73,7 @@ int GNSS_data(int fd){
             break;
         }  
 
-        sleep(5);
+        sleep(5);   //每五秒尝试重新定位
     }
 
     // printf("%s\n",response);
@@ -86,7 +83,6 @@ int GNSS_data(int fd){
     if(clean_res != NULL){
         *clean_res = '\0';
     }
-
 
     //处理位置信息，使其只输出经纬度
     char utc_time[16] = {0}, lat_str[16] = {0}, lon_str[16] = {0}, date_str[8] = {0};
@@ -99,6 +95,20 @@ int GNSS_data(int fd){
     double latitude = convert_long_and_lati(lat_str);
     double longtitude = convert_long_and_lati(lon_str);
 
+    //传出前用正负区分半球
+    if (lat_dir == 'S' || lat_dir == 's') {
+        latitude = -latitude;
+    }
+    if (lon_dir == 'W' || lon_dir == 'w') {
+        longtitude = -longtitude;
+    }
+    
+    // 存储数据（注意：这里需要修正time的赋值）
+    // data->time = buf; // 原写法错误，buf是局部数组
+    strncpy(data->time, buf, sizeof(data->time) - 1);
+    data->time[sizeof(data->time) - 1] = '\0';
+    data->latitude = latitude;
+    data->longtitude = longtitude;
 
     printf("[%s] 纬度：%.6f%c 经度：%.6f%c\n",buf,latitude,lat_dir,longtitude,lon_dir);
     return 0;
@@ -119,11 +129,8 @@ double convert_long_and_lati(const char* nmea_str){
 
 
 
-
-
 /**
  * @brief 将EC200N的CCLK时间字符串转换为本地时间字符串。
- * 
  * @param cclk_response 模块返回的CCLK响应，如 "+CCLK: \"25/07/22,08:01:11+32\""。
  * @param buffer 用于存储结果的缓冲区。
  * @param size 缓冲区大小。
@@ -166,3 +173,9 @@ int convert_time(const char* cclk_response, char* buffer, size_t size) {
 //     set_recv_data(fd,"AT+QLBS=1");
     
 // }
+
+//获取位置信息(需付费)
+//set_recv_data(fd,"AT+QLBSCFG?");
+// set_recv_data(fd,"AT+QLBS=2,\"94:B6:09:29:72:4B\",-30,\"1c:8b:ef:4c:5e:87\",-39");
+// const char* locate = set_recv_data(fd,"AT+QLBS");
+// printf("RECV location:%s\n",locate);

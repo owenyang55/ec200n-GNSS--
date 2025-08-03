@@ -47,14 +47,23 @@ const char * set_recv_data(int fd,const char *data){
 //初始化ec200
 int ec200_init(int fd){
     const char* buf = set_recv_data(fd,"AT");
-    if(buf =="OK"){
-        return 0;
-    }
-    else if(buf == "ERROR"){
+    if(strstr(buf,"ERROR") != NULL){
         return -1;
     }
     set_recv_data(fd,"AT+QLBSCFG=\"token\"");
+
+    buf = set_recv_data(fd,"ATE0");//关闭回显
+    if (strstr(buf, "OK") == NULL) {
+        printf("Warning: Failed to disable echo (ATE0). Proceeding anyway.\n");
+    }
+    else{
+        printf("echo closed\n");
+    }
+    
+    return 0;
 }
+
+
 //初始化串口
 int set_uart(int fd, int speed, int bits, char check, int stop) {
     struct termios newtio;

@@ -11,6 +11,11 @@
 #include "gps.h"
 #include "sim.h"
 
+
+// #define APN "CTNET" //电信
+// #define IP "127.0.0.1" //虚拟机IP
+
+
 int main(int argc, char *argv[]) {
     // if (argc < 2) {
     //     fprintf(stderr, "用法: %s \"AT指令\"\n", argv[0]);
@@ -19,6 +24,8 @@ int main(int argc, char *argv[]) {
 
     int fd, count;
     char command_buffer[128];
+    //实例化结构体(位于gps.h)
+    struct send_data data;
 
     //确定串口位置
     fd = open("/dev/ttyUSB1", O_RDWR | O_NOCTTY);
@@ -60,19 +67,45 @@ int main(int argc, char *argv[]) {
         exit(-1);
     }
 
-    //间隔30s循环打印时间及位置信息
+    //初始化mqtt协议
+    flag = mqtt_init(fd);
+    if(flag == -1){
+        close(fd);
+        printf("error in mqtt_init\n");
+        exit(-1);
+    }
+    //连接物联网服务平台
+    flag = mqtt_connect(fd);
+    if(flag == -1){
+        close(fd);
+        printf("error in mqtt_connect\n");
+        exit(-1);
+    }
+
+    sleep(1);
+
+    //发送测试信息(2025/8/2)
+    flag = mqtt_send_data(fd,"2001/12/21",60,120);
+
+    //间隔30s循环打印时间及位置信息，并上传到服务器
     while(1){
-        flag = GNSS_data(fd);
+        flag = GNSS_data(fd,&data);
         if(flag == -1){
             close(fd);
             printf("error in gps_data\n");
             exit(-1);
         }
+        flag = mqtt_send_data(fd,data.time,data.latitude,data.longtitude);
+        if(flag == -1){
+            close(fd);
+            printf("error in mqtt_send_data\n");
+            exit(-1);
+        }
         sleep(30);
+
     }
 
-
-    
+    mqtt_close(fd);
     close(fd);
     return 0;
 }
